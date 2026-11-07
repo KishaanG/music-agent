@@ -1,0 +1,4 @@
+bpm-finder==0.2.0
+librosa==1.0.0
+mathplotlib==3.11.2
+pyloudnorm==0.2.0
