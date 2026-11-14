@@ -58,8 +58,9 @@ class AudioFeatures():
             "bass_difference": self._bass_difference,
         }
 
-    def plot(self):
+    def plot(self, title="Song"):
         fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(16, 10), layout="constrained")
+        fig.canvas.manager.set_window_title(f"Audio Feature Analysis for {title}")
         self._getTempoPlot(fig=fig, ax=ax[0, 0])
         self._getMainFrequencyPlot(fig=fig, ax=ax[0, 1])
         self._getDynamicsPlot(ax=ax[1, 0])
