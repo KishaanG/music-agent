@@ -3,6 +3,9 @@
 ## Get All Features from Playlist
 py .\extract_features.py '<playlist url>' '<path to ffmpeg.exe>'
 
+Audio will be created, THEN DELETED in ./audio_files (The folder will remain)
+Feature data will be created as test.json in ./data
+
 ## Add this function in extract_features -> main() to view Plots for a song
 <SongFeature>.displayPlotById("<video id>")
 
