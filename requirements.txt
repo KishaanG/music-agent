@@ -4,4 +4,5 @@ matplotlib==3.11.2
 pyloudnorm==0.2.0
 python-dotenv==1.2.4
 requests==2.34.2
-yt-dlp==2026.10.26
+yt-dlp[default]==2026.10.26
+deno==2.9.8
