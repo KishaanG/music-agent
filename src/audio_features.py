@@ -71,6 +71,7 @@ class AudioFeatures():
     def _loadSong(self):
         self._y, self._sr = librosa.load(self._path)
         self._onset_env = librosa.onset.onset_strength(y=self._y, sr=self._sr, hop_length=HOP_LENGTH)
+        
 
     '''
     BUCKET     |BPM RANGE
@@ -98,7 +99,7 @@ class AudioFeatures():
         self._spectral_centroid = librosa.feature.spectral_centroid(y=self._y, sr=self._sr, hop_length=HOP_LENGTH)[0]
         
         times = librosa.times_like(self._spectral_centroid, hop_length=HOP_LENGTH)
-        spline = make_smoothing_spline(times, self._spectral_centroid, lam=1e2)
+        spline = make_smoothing_spline(times[::4], self._spectral_centroid[::4], lam=(1e2)/4)
         self._smooth_spectral_centroid = spline(times)
 
         self._spectral_centroid_mean = np.average(self._spectral_centroid).item()
@@ -145,7 +146,7 @@ class AudioFeatures():
 
     def _getBeatStrength(self):
         beat_differences = []
-        _, self._beat_track = librosa.beat.beat_track(y=self._y, sr=self._sr, hop_length=HOP_LENGTH, start_bpm=self._static_tempo)
+        _, self._beat_track = librosa.beat.beat_track(y=self._y, sr=self._sr, hop_length=HOP_LENGTH, bpm=self._static_tempo)
         beat_interval = np.median(np.diff(self._beat_track))
 
         # For every beat: 
@@ -171,8 +172,9 @@ class AudioFeatures():
         return FuncFormatter(lambda seconds, _: f"{int(seconds // 60)}:{int(seconds % 60):02d}")
 
     def _getTempoPlot(self, fig, ax):
-        tempogram = librosa.feature.tempogram(onset_envelope=self._onset_env, sr=self._sr, hop_length=HOP_LENGTH)
-        img = librosa.display.specshow(tempogram, sr=self._sr, hop_length=HOP_LENGTH, x_axis='time', y_axis='tempo', cmap='magma', ax=ax)
+        if not self.tempogram:
+            self.tempogram = librosa.feature.tempogram(onset_envelope=self._onset_env, sr=self._sr, hop_length=HOP_LENGTH)
+        img = librosa.display.specshow(self.tempogram, sr=self._sr, hop_length=HOP_LENGTH, x_axis='time', y_axis='tempo', cmap='magma', ax=ax)
 
         times = librosa.times_like(self._dynamic_tempo, sr=self._sr, hop_length=HOP_LENGTH)
 

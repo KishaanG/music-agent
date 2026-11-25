@@ -1,6 +1,7 @@
+import os
 import sys
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.common import PostProcessor
@@ -8,9 +9,7 @@ from yt_dlp.postprocessor.common import PostProcessor
 import youtube_features as yf
 from audio_features import AudioFeatures
 
-# Defines maximum amount of threads that can be run concurrently
-# Set to 4 for now to test. Will look into what an amount should be later.
-MAX_WORKERS = 4
+FFMPEG_LOCATION = os.getenv("FFMPEG_LOCATION")
 
 # Post Processor for YouTube Downloading: run() will happen after each video to get Audio Features
 class GetAudioFeaturesPP(PostProcessor):
@@ -35,16 +34,14 @@ class GetAudioFeaturesPP(PostProcessor):
         return [filepath], info # return list_of_files_to_delete, info_dict
 
 class SongFeature():
-    def __init__(self, playlist_url, ffmpeg_location, path='./'):
+    def __init__(self, playlist_url, path='./'):
         self._results = yf.extractPlaylistFeatures(playlist=playlist_url)
         self._audio_data = {}
-        self._ffmpeg_location = ffmpeg_location
         self._path = path
 
-        # Runs SongFeature.download() concurrently for each video in playlist
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as tpe:
+        with ProcessPoolExecutor(max_workers=os.cpu_count()) as ppe:
             futures = { 
-                tpe.submit(
+                ppe.submit(
                     self.download, 
                     v["url"], 
                     k
@@ -60,6 +57,10 @@ class SongFeature():
     def getFeatures(self):
         return self._results
 
+    def exportFeaturesToJSON(self, path):
+        with open(path, 'w', encoding='utf-8') as file:
+            json.dump(self.getFeatures(), file, indent=2, ensure_ascii=False)
+
     def displayPlotById(self, id):
         af = self._audio_data.get(id)
 
@@ -73,9 +74,9 @@ class SongFeature():
             return
         opts = {
             "format": "bestaudio/best",
-            'outtmpl': f'{self._path}/audio_files/%(id)s.%(ext)s',
-            'ffmpeg_location': self._ffmpeg_location,
-            'keepvideo': False,
+            "outtmpl": f"{self._path}/audio_files/%(id)s.%(ext)s",
+            "ffmpeg_location": FFMPEG_LOCATION,
+            "keepvideo": False,
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "wav"
@@ -85,13 +86,8 @@ class SongFeature():
             ydl.add_post_processor(GetAudioFeaturesPP(results=self._results, data=self._audio_data, id=id), when='after_move')
             ydl.download(url)
 
-# -- FINDING ffmpeg LOCATION --
-# If you do not have ffmpeg, enter: winget install ffmpeg
-# Then, run: where ffmpeg
 def main():
-    sf = SongFeature(playlist_url=sys.argv[1], ffmpeg_location=sys.argv[2])
-    with open('./data/test.json', 'w', encoding='utf-8') as file:
-        json.dump(sf.getFeatures(), file, indent=2, ensure_ascii=False)
+    SongFeature(playlist_url=sys.argv[1]).exportFeaturesToJSON(sys.argv[2])
 
 if __name__ == "__main__":
     main()
