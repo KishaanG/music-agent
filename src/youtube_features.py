@@ -170,8 +170,19 @@ def extractVideoFeatures(video_ids):
     return features
 
 
+def getPlaylistOwner(playlist_id):
+    page = apiGet("playlists", {"part": "snippet", "id": playlist_id})
+    snippet = page["items"][0]["snippet"]
+    return {
+        "owner_channel_id": snippet["channelId"],
+        "owner_name": snippet["channelTitle"],
+        "playlist_title": snippet["title"]
+    }
+
 def extractPlaylistFeatures(playlist):
-    items = getPlaylistItems(getPlaylistId(playlist))
+    playlist_id = getPlaylistId(playlist)
+    playlist_data = getPlaylistOwner(playlist_id)
+    items = getPlaylistItems(playlist_id)
 
     added_dates = {}
     for item in items:
@@ -181,11 +192,15 @@ def extractPlaylistFeatures(playlist):
 
     video_ids = list(added_dates.keys())
 
-    features = extractVideoFeatures(video_ids)
-    for video_id in features:
-        features[video_id]["added_to_playlist_at"] = added_dates[video_id]
-    return features
-
+    video_features = extractVideoFeatures(video_ids)
+    for video_id in video_features:
+        video_features[video_id]["added_to_playlist_at"] = added_dates[video_id]
+    
+    features = {
+        "playlist_data": playlist_data,
+        "song_data": video_features
+    }
+    return features, playlist_id
 
 if __name__ == "__main__":
     playlist = sys.argv[1]

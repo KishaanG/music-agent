@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ super() }} - Home
+{% endblock %}
+
+{% block content %}
+    <div class="container my-4">
+        <div class="row">
+            <div class="col">
+                <div class="card {{ 'text-bg-primary' if comp.current()['rater']['idx'] == 0 else 'text-bg-secondary' }}">
+                    <div class="card-body">
+                        <h2 class="text-wrap">USER: {{ comp.sr1.getPlaylistData()["owner_name"] }}</h2>
+                        <h4 class="text-wrap">PLAYLIST: {{ comp.sr1.getPlaylistData()["playlist_title"] }}</h4>
+                        <p class="card-text">Confidence: {{ comp.sr1.getConfidence() }}%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card {{ 'text-bg-primary' if comp.current()['rater']['idx'] == 1 else 'text-bg-secondary' }}">
+                    <div class="card-body">
+                        <h2 class="text-wrap">USER: {{ comp.sr2.getPlaylistData()["owner_name"] }}</h2>
+                        <h4 class="text-wrap">PLAYLIST: {{ comp.sr2.getPlaylistData()["playlist_title"] }}</h4>
+                        <p class="card-text">Confidence: {{ comp.sr2.getConfidence() }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if comp.done() %}
+    <div class="container my-4">
+        <div class="card text-bg-success">
+            <div class="card-body">
+                <h4 class="card-title">
+                    COMPLETE
+                </h4>
+                <p class="card-text">
+                    Ratings are completed. Click below to navigate to the results.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="container my-4">
+        <div class="card text-bg-primary">
+            <div class="card-header text-center">
+                <h3>Current Rater: {{ comp.current()["rater"]["name"] }}</h3>
+            </div>
+            <div class="card-body">
+                <form   method="POST"
+                        action="{{ url_for('rate', comp_id=comp.id)}}">
+                    <div class="row g-2 align-items-stretch">
+                        <div class="col-2">
+                            <button class="btn btn-danger w-100 h-100"
+                                    name="like"
+                                    value="false">
+                                Dislike
+                            </button>
+                        </div>
+
+                        <div class="col-8">
+                            <div class="ratio ratio-16x9">
+                                <iframe class="d-block mx-auto"
+                                        src="https://www.youtube.com/embed/{{ comp.current()["song"] }}">
+                                </iframe>
+                            </div>
+                        </div>
+
+                        <div class="col-2">
+                            <button class="btn btn-success w-100 h-100"
+                                    name="like"
+                                    value="true">
+                                Like
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}

@@ -71,7 +71,7 @@ class AudioFeatures():
     def _loadSong(self):
         self._y, self._sr = librosa.load(self._path)
         self._onset_env = librosa.onset.onset_strength(y=self._y, sr=self._sr, hop_length=HOP_LENGTH)
-        
+        self._tempogram = None
 
     '''
     BUCKET     |BPM RANGE
@@ -172,13 +172,14 @@ class AudioFeatures():
         return FuncFormatter(lambda seconds, _: f"{int(seconds // 60)}:{int(seconds % 60):02d}")
 
     def _getTempoPlot(self, fig, ax):
-        if not self.tempogram:
-            self.tempogram = librosa.feature.tempogram(onset_envelope=self._onset_env, sr=self._sr, hop_length=HOP_LENGTH)
-        img = librosa.display.specshow(self.tempogram, sr=self._sr, hop_length=HOP_LENGTH, x_axis='time', y_axis='tempo', cmap='magma', ax=ax)
+        if self._tempogram is None:
+            onset_env = librosa.onset.onset_strength(y=self._y, sr=self._sr)
+            self._tempogram = librosa.feature.tempogram(onset_envelope=onset_env, sr=self._sr)
+        img = librosa.display.specshow(self._tempogram, sr=self._sr, x_axis='time', y_axis='tempo', cmap='magma', ax=ax)
 
-        times = librosa.times_like(self._dynamic_tempo, sr=self._sr, hop_length=HOP_LENGTH)
+        times = librosa.times_like(self._dynamic_tempo[::4], sr=self._sr)
 
-        ax.plot(times, self._dynamic_tempo, linewidth=2, color='white', label='Tempo Estimate')
+        ax.plot(times, self._dynamic_tempo[::4], linewidth=2, color='white', label='Tempo Estimate')
         ax.axhline(self._static_tempo, linewidth=2, color='cyan', linestyle='--', label=f'Estimated tempo (~{int(round(self._static_tempo))} bpm)')
 
         ax.set_ylim(MINIMUM_TEMPO, MAXIMUM_TEMPO)

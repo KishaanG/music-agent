@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ super() }} - Upload Playlist
+{% endblock %}
+
+{% block content %}
+    <div class="container my-4">
+        {% if error %}
+        <div class="card text-bg-danger mt-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    Error
+                </h5>
+                <p class="card-text">
+                    {{ error }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        {% if complete %}
+        <div class="card text-bg-success mt-4">
+            <div class="card-header text-bg-success">
+                Upload Complete
+            </div>
+            <div class="card-body">
+                Your playlist has been analyzed and the data has been saved.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="container my-4">
+        <div class="card text-bg-primary">
+            <div class="card-header">
+                Please paste your Public YouTube Playlist's URL
+            </div>
+            <div class="card-body">
+                <form   action="{{ url_for('index') }}" 
+                        method="POST">
+                    <div class="mb-3">
+                        <label  for="url" 
+                                class="form-label visually-hidden">
+                            Playlist URL
+                        </label>
+                        <div class="input-group">
+                            <input class="form-control"
+                                type="url"
+                                id="url"
+                                name="url"
+                                placeholder="https://www.youtube.com/playlist?list=abc123..."
+                                required>
+                            <button type="submit" 
+                                    class="btn btn-success">
+                                Submit
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% if files %}
+        <div class="container my-4">
+            <div class="card text-bg-primary">
+                <div class="card-header">
+                    Playlists Uploaded 
+                </div>
+                <div class="card-body">
+                    <form   action="{{ url_for('index') }}" 
+                            method="post">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>
+                                Choose 2 playlists to compare:
+                            </span>
+                            <button type="submit"
+                                    class="btn btn-success">
+                                Compare
+                            </button>
+                        </div>
+                        <table  class="table table-striped w-100" 
+                                style="table-layout: fixed; color: black;">
+                            <thead>
+                                <tr>
+                                    <th scope="col"
+                                        class="w-25 text-center">
+                                        #
+                                    </th>
+                                    <th scope="col" 
+                                        class="w-50">
+                                        Playlist ID
+                                    </th>
+                                    <th scope="col" 
+                                        class="w-25 text-center">
+                                        Select
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, file in files %}
+                                <tr>
+                                    <th scope="row"
+                                        class="text-center">
+                                        {{ i }}
+                                    </th>
+                                    <td class="text-break">
+                                        {{ file }}
+                                    </td>
+                                    <td class="text-center">
+                                        <input  class="form-check-input"
+                                                type="checkbox"
+                                                name="selected"
+                                                value="{{ file }}"
+                                                id="select-{{ i }}">  
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="container my-4">
+            <div class="card text-bg-warning mt-4">
+                <div class="card-header">Warning</div>
+                <div class="card-body">
+                    <h5 class="card-title">No Files Loaded</h5>
+                    <p class="card-text">There are currently no loaded playlists. Please index above for analysis.</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

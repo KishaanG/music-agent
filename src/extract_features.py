@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.common import PostProcessor
@@ -9,7 +9,12 @@ from yt_dlp.postprocessor.common import PostProcessor
 import youtube_features as yf
 from audio_features import AudioFeatures
 
+from file_reading import getJSONFileFullPathname, getAudioFolderPathname
+
+__all__ = [ "SongFeature" ]
+
 FFMPEG_LOCATION = os.getenv("FFMPEG_LOCATION")
+MAX_WORKERS = os.cpu_count() / 4
 
 # Post Processor for YouTube Downloading: run() will happen after each video to get Audio Features
 class GetAudioFeaturesPP(PostProcessor):
@@ -24,42 +29,44 @@ class GetAudioFeaturesPP(PostProcessor):
         if filepath is None:
             return [], info
 
-        self.to_screen(f'Getting Audio Features for "{self.results[self.id]["title"]} ({self.id})"')
+        self.to_screen(f'Getting Audio Features for "{self.results["song_data"][self.id]["title"]} ({self.id})"')
         af = AudioFeatures(filepath)
         self.data[self.id] = af
-        self.results[self.id].update(af.getFeatures())
-        self.results[self.id]["features_found"] = True
-        self.to_screen(f'Extracted Audio Features for "{self.results[self.id]["title"]} ({self.id})"')
+        self.results["song_data"][self.id].update(af.getFeatures())
+        self.results["song_data"][self.id]["features_found"] = True
+        self.to_screen(f'Extracted Audio Features for "{self.results["song_data"][self.id]["title"]} ({self.id})"')
         
         return [filepath], info # return list_of_files_to_delete, info_dict
 
 class SongFeature():
-    def __init__(self, playlist_url, path='./'):
-        self._results = yf.extractPlaylistFeatures(playlist=playlist_url)
+    def __init__(self, playlist_url):
+        self._results, self._playlist_id = yf.extractPlaylistFeatures(playlist=playlist_url)
         self._audio_data = {}
-        self._path = path
 
-        with ProcessPoolExecutor(max_workers=os.cpu_count()) as ppe:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as tpe:
             futures = { 
-                ppe.submit(
-                    self.download, 
+                tpe.submit(
+                    self._download, 
                     v["url"], 
                     k
-                ): k for k,v in self._results.items()
+                ): k for k,v in self._results["song_data"].items()
             }
             for f in as_completed(futures):
                 item = futures[f]
                 try:
                     f.result()
                 except Exception as e:
-                    print(f"ERROR for {item}: {e}")
+                    print(f"ERROR for {item}: {e!r}")
 
     def getFeatures(self):
         return self._results
 
-    def exportFeaturesToJSON(self, path):
-        with open(path, 'w', encoding='utf-8') as file:
-            json.dump(self.getFeatures(), file, indent=2, ensure_ascii=False)
+    def getPlaylistId(self):
+        return self._playlist_id
+
+    def exportFeaturesToJSON(self):
+        with open(getJSONFileFullPathname(self._playlist_id), "w", encoding="utf-8") as file:
+            json.dump(self._results, file, indent=2, ensure_ascii=False)        
 
     def displayPlotById(self, id):
         af = self._audio_data.get(id)
@@ -67,14 +74,14 @@ class SongFeature():
         if af is None:
             return
 
-        af.plot(title=self._results[id]["title"])
+        af.plot(title=self._results["song_data"][id]["title"])
 
-    def download(self, url, id):
-        if self._results[id].get("features_found"):
+    def _download(self, url, id):
+        if self._results["song_data"][id].get("features_found"):
             return
         opts = {
             "format": "bestaudio/best",
-            "outtmpl": f"{self._path}/audio_files/%(id)s.%(ext)s",
+            "outtmpl": f"{getAudioFolderPathname()}/%(id)s.%(ext)s",
             "ffmpeg_location": FFMPEG_LOCATION,
             "keepvideo": False,
             "postprocessors": [{
@@ -87,7 +94,7 @@ class SongFeature():
             ydl.download(url)
 
 def main():
-    SongFeature(playlist_url=sys.argv[1]).exportFeaturesToJSON(sys.argv[2])
+    SongFeature(playlist_url=sys.argv[1]).exportFeaturesToJSON()
 
 if __name__ == "__main__":
-    main()
+    main()  
